@@ -136,11 +136,14 @@ impl WebidlParse<()> for webidl::ast::Definition {
             webidl::ast::Definition::Typedef(typedef) => {
                 typedef.webidl_parse(program, first_pass, ())?
             }
+            webidl::ast::Definition::Namespace(ref namespace) => {
+                namespace.webidl_parse(program, first_pass, ())?
+            }
+
             // TODO
             webidl::ast::Definition::Callback(..)
             | webidl::ast::Definition::Dictionary(..)
-            | webidl::ast::Definition::Implements(..)
-            | webidl::ast::Definition::Namespace(..) => {
+            | webidl::ast::Definition::Implements(..) => {
                 warn!("Unsupported WebIDL definition: {:?}", self)
             }
             webidl::ast::Definition::Mixin(_) => {
@@ -199,6 +202,82 @@ impl WebidlParse<()> for webidl::ast::Interface {
         }
     }
 }
+
+impl WebidlParse<()> for webidl::ast::Namespace {
+    fn webidl_parse(
+        &self,
+        program: &mut backend::ast::Program,
+        first_pass: &FirstPassRecord<'_>,
+        (): (),
+    ) -> Result<()> {
+        match *self {
+            webidl::ast::Namespace::NonPartial(ref namespace) => {
+                namespace.webidl_parse(program, first_pass, ())
+            }
+            webidl::ast::Namespace::Partial(_) => {
+                warn!("Unsupported WebIDL partial namespace: {:?}", self);
+                Ok(())
+            }
+        }
+    }
+}
+
+impl WebidlParse<()> for webidl::ast::NonPartialNamespace {
+    fn webidl_parse(
+        &self,
+        program: &mut backend::ast::Program,
+        first_pass: &FirstPassRecord<'_>,
+        (): (),
+    ) -> Result<()> {
+        if util::is_chrome_only(&self.extended_attributes) {
+            return Ok(());
+        }
+
+        let mut namespace = backend::ast::ImportNamespace {
+            vis: public(),
+            name: rust_ident(self.name.to_camel_case().to_lowercase().as_str()),
+            functions: vec![],
+        };
+
+        for member in &self.members {
+            member.webidl_parse(program, first_pass, &mut namespace)?;
+        }
+
+        program.imports.push(backend::ast::Import {
+            module: None,
+            version: None,
+            js_namespace: None,
+            kind: backend::ast::ImportKind::Namespace(namespace),
+        });
+
+        Ok(())
+    }
+}
+
+impl<'a> WebidlParse<&'a mut backend::ast::ImportNamespace> for webidl::ast::NamespaceMember {
+    fn webidl_parse(
+        &self,
+        program: &mut backend::ast::Program,
+        first_pass: &FirstPassRecord<'_>,
+        namespace: &'a mut backend::ast::ImportNamespace
+    ) -> Result<()> {
+        match *self {
+            webidl::ast::NamespaceMember::Operation(ref operation) => {
+                operation.webidl_parse(program, first_pass, namespace)
+            }
+            webidl::ast::NamespaceMember::Attribute(_) => {
+                warn!("Unsupported WebIDL namespace member attribute: {:?}", self);
+                Ok(())
+            }
+        }
+  }
+}
+
+// impl<'a> WebidlParse<&'a str> for webidl::ast::NamespaceMember::Operation {
+//     fn webidle_parse(&self, program: &mut backend::ast::Program, namespace_name: &'a str) -> Result<()> {
+//         Ok(())
+//     }
+// }
 
 impl WebidlParse<()> for webidl::ast::Typedef {
     fn webidl_parse(
@@ -469,6 +548,25 @@ impl<'a> WebidlParse<&'a str> for webidl::ast::Operation {
     }
 }
 
+impl<'a> WebidlParse<&'a mut backend::ast::ImportNamespace> for webidl::ast::Operation {
+    fn webidl_parse(
+        &self,
+        program: &mut backend::ast::Program,
+        first_pass: &FirstPassRecord<'_>,
+        namespace: &'a mut backend::ast::ImportNamespace,
+    ) -> Result<()> {
+        match self {
+            webidl::ast::Operation::Regular(op) => op.webidl_parse(program, first_pass, namespace),
+            webidl::ast::Operation::Static(op) => op.webidl_parse(program, first_pass, namespace),
+            // TODO
+            webidl::ast::Operation::Special(_) | webidl::ast::Operation::Stringifier(_) => {
+                warn!("Unsupported WebIDL operation: {:?}", self);
+                Ok(())
+            }
+        }
+    }
+}
+
 impl<'a> WebidlParse<&'a str> for webidl::ast::RegularAttribute {
     fn webidl_parse(
         &self,
@@ -610,6 +708,49 @@ impl<'a> WebidlParse<&'a str> for webidl::ast::StaticOperation {
             )
             .map(wrap_import_function)
             .map(|import| program.imports.push(import));
+
+        Ok(())
+    }
+}
+
+impl<'a> WebidlParse<&'a mut backend::ast::ImportNamespace> for webidl::ast::RegularOperation {
+    fn webidl_parse(
+        &self,
+        _program: &mut backend::ast::Program,
+        _first_pass: &FirstPassRecord<'_>,
+        _namespace: &'a mut backend::ast::ImportNamespace,
+    ) -> Result<()> {
+        if util::is_chrome_only(&self.extended_attributes) {
+            return Ok(());
+        }
+
+        Ok(())
+    }
+}
+
+impl<'a> WebidlParse<&'a mut backend::ast::ImportNamespace> for webidl::ast::StaticOperation {
+    fn webidl_parse(
+        &self,
+        _program: &mut backend::ast::Program,
+        first_pass: &FirstPassRecord<'_>,
+        namespace: &'a mut backend::ast::ImportNamespace,
+    ) -> Result<()> {
+        if util::is_chrome_only(&self.extended_attributes) {
+            return Ok(());
+        }
+
+        let throws = util::throws(&self.extended_attributes);
+
+        first_pass
+            .create_basic_method(
+                &self.arguments,
+                self.name.as_ref(),
+                &self.return_type,
+                &namespace.name.to_string(),
+                true,
+                throws,
+            )
+            .map(|import| namespace.functions.push(import));
 
         Ok(())
     }

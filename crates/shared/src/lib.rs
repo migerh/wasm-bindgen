@@ -34,6 +34,7 @@ pub enum ImportKind {
     Static(ImportStatic),
     Type(ImportType),
     Enum(ImportEnum),
+    Namespace(ImportNamespace),
 }
 
 #[derive(Deserialize, Serialize)]
@@ -49,6 +50,12 @@ pub struct ImportFunction {
 pub struct MethodData {
     pub class: String,
     pub kind: MethodKind,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct ImportNamespace {
+    pub name: String,
+    pub functions: Vec<ImportFunction>,
 }
 
 #[derive(Deserialize, Serialize)]

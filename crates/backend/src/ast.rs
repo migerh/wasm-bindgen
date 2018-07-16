@@ -43,6 +43,14 @@ pub enum ImportKind {
     Static(ImportStatic),
     Type(ImportType),
     Enum(ImportEnum),
+    Namespace(ImportNamespace),
+}
+
+#[cfg_attr(feature = "extra-traits", derive(Debug, PartialEq, Eq))]
+pub struct ImportNamespace {
+    pub vis: syn::Visibility,
+    pub name: Ident,
+    pub functions: Vec<ImportFunction>,
 }
 
 #[cfg_attr(feature = "extra-traits", derive(Debug, PartialEq, Eq))]
@@ -313,6 +321,7 @@ impl ImportKind {
             ImportKind::Static(_) => false,
             ImportKind::Type(_) => false,
             ImportKind::Enum(_) => false,
+            ImportKind::Namespace(_) => false,
         }
     }
 
@@ -322,6 +331,7 @@ impl ImportKind {
             ImportKind::Static(ref f) => shared::ImportKind::Static(f.shared()),
             ImportKind::Type(ref f) => shared::ImportKind::Type(f.shared()),
             ImportKind::Enum(ref f) => shared::ImportKind::Enum(f.shared()),
+            ImportKind::Namespace(ref f) => shared::ImportKind::Namespace(f.shared()),
         }
     }
 }
@@ -396,6 +406,15 @@ impl ImportStatic {
 impl ImportType {
     fn shared(&self) -> shared::ImportType {
         shared::ImportType {}
+    }
+}
+
+impl ImportNamespace {
+    fn shared(&self) -> shared::ImportNamespace {
+        shared::ImportNamespace {
+            name: self.name.to_string(),
+            functions: self.functions.iter().map(|f| f.shared()).collect(),
+        }
     }
 }
 

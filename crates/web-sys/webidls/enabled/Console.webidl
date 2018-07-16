@@ -72,8 +72,9 @@ namespace console {
   [UseCounter]
   void profileEnd(any... data);
 
-  [ChromeOnly]
-  const boolean IS_NATIVE_CONSOLE = true;
+  // webidl-rs does not support const inside a namespace
+  //[ChromeOnly]
+  //const boolean IS_NATIVE_CONSOLE = true;
 
   [ChromeOnly, NewObject]
   ConsoleInstance createInstance(optional ConsoleInstanceOptions options);

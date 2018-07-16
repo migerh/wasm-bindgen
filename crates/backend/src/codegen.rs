@@ -506,6 +506,7 @@ impl ToTokens for ast::ImportKind {
             ast::ImportKind::Static(ref s) => s.to_tokens(tokens),
             ast::ImportKind::Type(ref t) => t.to_tokens(tokens),
             ast::ImportKind::Enum(ref e) => e.to_tokens(tokens),
+            ast::ImportKind::Namespace(ref ns) => ns.to_tokens(tokens),
         }
     }
 }
@@ -587,6 +588,18 @@ impl ToTokens for ast::ImportType {
                 fn from(obj: #name) -> ::wasm_bindgen::JsValue {
                     obj.obj
                 }
+            }
+        }).to_tokens(tokens);
+    }
+}
+
+impl ToTokens for ast::ImportNamespace {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let vis = &self.vis;
+        let name = &self.name;
+        (quote! {
+            #[allow(bad_style)]
+            #vis mod #name {
             }
         }).to_tokens(tokens);
     }
@@ -848,6 +861,7 @@ impl<'a> ToTokens for DescribeImport<'a> {
             ast::ImportKind::Static(_) => return,
             ast::ImportKind::Type(_) => return,
             ast::ImportKind::Enum(_) => return,
+            ast::ImportKind::Namespace(_) => return,
         };
         let describe_name = format!("__wbindgen_describe_{}", f.shim);
         let describe_name = Ident::new(&describe_name, Span::call_site());
