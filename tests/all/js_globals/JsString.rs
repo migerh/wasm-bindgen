@@ -8,7 +8,7 @@ fn length() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -45,7 +45,7 @@ fn char_at() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -80,7 +80,7 @@ fn char_code_at() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -121,7 +121,7 @@ fn code_point_at() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -155,7 +155,7 @@ fn concat() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -188,10 +188,42 @@ fn concat() {
 }
 
 #[test]
+fn ends_with() {
+    project()
+        .file("src/lib.rs", r#"
+            #![feature(use_extern_macros)]
+
+            extern crate wasm_bindgen;
+            use wasm_bindgen::prelude::*;
+            use wasm_bindgen::js;
+
+            #[wasm_bindgen]
+            pub fn ends_with(this: &js::JsString, search_value: &js::JsString, length: i32) -> bool {
+                this.ends_with(search_value, length)
+            }
+        "#)
+        .file("test.js", r#"
+            import * as assert from "assert";
+            import * as wasm from "./out";
+
+            export function test() {
+                let str = "To be, or not to be, that is the question.";
+                let len = str.length;
+
+                // TODO: remove third parameter once we have optional parameters
+                assert.equal(wasm.ends_with(str, "question.", len), true);
+                assert.equal(wasm.ends_with(str, "to be", len), false);
+                assert.equal(wasm.ends_with(str, "to be", 19), true);         
+            }
+        "#)
+        .test()
+}
+
+#[test]
 fn includes() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -226,7 +258,7 @@ fn includes() {
 fn index_of() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -262,12 +294,195 @@ fn index_of() {
 }
 
 #[test]
+fn last_index_of() {
+    project()
+        .file("src/lib.rs", r#"
+            #![feature(use_extern_macros)]
+
+            extern crate wasm_bindgen;
+            use wasm_bindgen::prelude::*;
+            use wasm_bindgen::js;
+
+            #[wasm_bindgen]
+            pub fn string_last_index_of(this: &js::JsString, search_value: &js::JsString, from_index: i32) -> i32 {
+                this.last_index_of(search_value, from_index)
+            }
+        "#)
+        .file("test.js", r#"
+            import * as assert from "assert";
+            import * as wasm from "./out";
+
+            export function test() {
+                let str = "canal";
+                let len = str.length;
+
+                // TODO: remove second parameter once we have optional parameters
+                assert.equal(wasm.string_last_index_of(str, 'a', len), 3);
+                assert.equal(wasm.string_last_index_of(str, 'a', 2), 1);
+                assert.equal(wasm.string_last_index_of(str, 'a', 0), -1);
+                // TODO: remove second parameter once we have optional parameters
+                assert.equal(wasm.string_last_index_of(str, 'x', len), -1);
+                assert.equal(wasm.string_last_index_of(str, 'c', -5), 0);
+                assert.equal(wasm.string_last_index_of(str, 'c', 0), 0);
+                // TODO: remove second parameter once we have optional parameters
+                assert.equal(wasm.string_last_index_of(str, '', len), 5);
+                assert.equal(wasm.string_last_index_of(str, '', 2), 2);
+            }
+        "#)
+        .test()
+}
+
+#[test]
+fn normalize() {
+    project()
+        .file("src/lib.rs", r#"
+            #![feature(use_extern_macros)]
+
+            extern crate wasm_bindgen;
+            use wasm_bindgen::prelude::*;
+            use wasm_bindgen::js;
+
+            #[wasm_bindgen]
+            pub fn string_normalize(this: &js::JsString, form: &js::JsString) -> js::JsString {
+                this.normalize(form)
+            }
+        "#)
+        .file("test.js", r#"
+            import * as assert from "assert";
+            import * as wasm from "./out";
+
+            export function test() {
+                let str = "\u1E9B\u0323";
+
+                // TODO: Handle undefined
+                assert.equal(wasm.string_normalize(str, "NFC"), "\u1E9B\u0323");
+                assert.equal(wasm.string_normalize(str, "NFD"), "\u017F\u0323\u0307");
+                assert.equal(wasm.string_normalize(str, "NFKC"), "\u1E69");
+                assert.equal(wasm.string_normalize(str, "NFKD"), "\u0073\u0323\u0307");
+            }
+        "#)
+        .test()
+}
+
+#[test]
+fn pad_end() {
+    project()
+        .file("src/lib.rs", r#"
+            #![feature(use_extern_macros)]
+
+            extern crate wasm_bindgen;
+            use wasm_bindgen::prelude::*;
+            use wasm_bindgen::js;
+
+            #[wasm_bindgen]
+            pub fn string_pad_end(
+                this: &js::JsString,
+                target_length: u32,
+                pad_string: &js::JsString
+            ) -> js::JsString
+            {
+                this.pad_end(target_length, pad_string)
+            }
+        "#)
+        .file("test.js", r#"
+            import * as assert from "assert";
+            import * as wasm from "./out";
+
+            export function test() {
+                let str = "abc";
+
+                // TODO: remove second parameter once we have optional parameters
+                assert.equal(wasm.string_pad_end(str, 10, " "), "abc       ");
+                // TODO: remove second parameter once we have optional parameters
+                assert.equal(wasm.string_pad_end(str, 10, " "), "abc       ");
+                assert.equal(wasm.string_pad_end(str, 10, "foo"), "abcfoofoof");
+                assert.equal(wasm.string_pad_end(str, 6, "123456"), "abc123");
+                // TODO: remove second parameter once we have optional parameters
+                assert.equal(wasm.string_pad_end(str, 1, " "), "abc");
+            }
+        "#)
+        .test()
+}
+
+#[test]
+fn pad_start() {
+    project()
+        .file("src/lib.rs", r#"
+            #![feature(use_extern_macros)]
+
+            extern crate wasm_bindgen;
+            use wasm_bindgen::prelude::*;
+            use wasm_bindgen::js;
+
+            #[wasm_bindgen]
+            pub fn string_pad_start(
+                this: &js::JsString,
+                target_length: u32,
+                pad_string: &js::JsString
+            ) -> js::JsString
+            {
+                this.pad_start(target_length, pad_string)
+            }
+        "#)
+        .file("test.js", r#"
+            import * as assert from "assert";
+            import * as wasm from "./out";
+
+            export function test() {
+                let str = "abc";
+
+                // TODO: remove second parameter once we have optional parameters
+                assert.equal(wasm.string_pad_start(str, 10, " "), "       abc");
+                assert.equal(wasm.string_pad_start(str, 10, "foo"), "foofoofabc");
+                assert.equal(wasm.string_pad_start(str, 6, "123465"), "123abc");
+                assert.equal(wasm.string_pad_start(str, 8, "0"), "00000abc");
+                // TODO: remove second parameter once we have optional parameters
+                assert.equal(wasm.string_pad_start(str, 1, " "), "abc");
+            }
+        "#)
+        .test()
+}
+
+#[test]
+fn repeat() {
+    project()
+        .file(
+            "src/lib.rs",
+            r#"
+            #![feature(use_extern_macros)]
+
+            extern crate wasm_bindgen;
+            use wasm_bindgen::prelude::*;
+            use wasm_bindgen::js;
+
+            #[wasm_bindgen]
+            pub fn string_repeat(this: &js::JsString, count: i32) -> js::JsString {
+                this.repeat(count)
+            }
+        "#,
+        )
+        .file(
+            "test.js",
+            r#"
+            import * as assert from "assert";
+            import * as wasm from "./out";
+
+            export function test() {
+                let str = "test";
+                assert.equal(wasm.string_repeat(str, 3), "testtesttest");
+            }
+        "#,
+        )
+        .test()
+}
+
+#[test]
 fn slice() {
     project()
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -300,7 +515,7 @@ fn slice() {
 fn starts_with() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -331,7 +546,7 @@ fn starts_with() {
 fn substring() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -370,7 +585,7 @@ fn substring() {
 fn substr() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -406,7 +621,7 @@ fn substr() {
 fn to_lower_case() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -434,7 +649,7 @@ fn to_string() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -465,7 +680,7 @@ fn to_string() {
 fn to_upper_case() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -493,7 +708,7 @@ fn trim() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -527,7 +742,7 @@ fn trim_end_and_trim_right() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -567,7 +782,7 @@ fn trim_start_and_trim_left() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -607,7 +822,7 @@ fn value_of() {
         .file(
             "src/lib.rs",
             r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;

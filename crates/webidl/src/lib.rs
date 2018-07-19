@@ -79,7 +79,7 @@ fn compile_ast(mut ast: backend::ast::Program) -> String {
     let mut defined = BTreeSet::from_iter(
         vec![
             "str", "char", "bool", "JsValue", "u8", "i8", "u16", "i16", "u32", "i32", "u64", "i64",
-            "usize", "isize", "f32", "f64", "Result",
+            "usize", "isize", "f32", "f64", "Result", "String", "Vec",
         ].into_iter()
             .map(|id| proc_macro2::Ident::new(id, proc_macro2::Span::call_site())),
     );
@@ -320,6 +320,10 @@ impl WebidlParse<()> for webidl::ast::NonPartialInterface {
         (): (),
     ) -> Result<()> {
         if util::is_chrome_only(&self.extended_attributes) {
+            return Ok(());
+        }
+
+        if util::is_no_interface_object(&self.extended_attributes) {
             return Ok(());
         }
 

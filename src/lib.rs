@@ -6,7 +6,7 @@
 //! interface.
 
 #![feature(use_extern_macros, wasm_import_module, unsize)]
-#![cfg_attr(feature = "js_globals", feature(proc_macro, wasm_custom_section))]
+#![cfg_attr(feature = "js_globals", feature(use_extern_macros))]
 #![no_std]
 
 #[cfg(feature = "serde-serialize")]
@@ -685,6 +685,20 @@ pub mod __rt {
             let layout = Layout::from_size_align_unchecked(size, align);
             System.dealloc(ptr, layout);
         }
+    }
+
+    pub const GLOBAL_STACK_CAP: usize = 16;
+
+    // Increase the alignment to 8 here because this can be used as a
+    // BigUint64Array pointer base which requires alignment 8
+    #[repr(align(8))]
+    struct GlobalData([u32; GLOBAL_STACK_CAP]);
+
+    static mut GLOBAL_STACK: GlobalData = GlobalData([0; GLOBAL_STACK_CAP]);
+
+    #[no_mangle]
+    pub unsafe extern "C" fn __wbindgen_global_argument_ptr() -> *mut u32 {
+        GLOBAL_STACK.0.as_mut_ptr()
     }
 
     /// This is a curious function necessary to get wasm-bindgen working today,

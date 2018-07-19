@@ -6,7 +6,7 @@ use project;
 fn clear() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -38,7 +38,7 @@ fn clear() {
 fn delete() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -67,10 +67,55 @@ fn delete() {
 }
 
 #[test]
+fn for_each() {
+    project()
+        .file("src/lib.rs", r#"
+            #![feature(use_extern_macros)]
+
+            extern crate wasm_bindgen;
+            use wasm_bindgen::prelude::*;
+            use wasm_bindgen::js;
+
+            #[wasm_bindgen]
+            pub fn get_bool_vals(this: &js::Map) -> js::Map {
+                let res = js::Map::new();
+                this.for_each(&mut |value, key| {
+                    if value.as_bool().is_some() {
+                        res.set(&key, &value);
+                    }
+                });
+                res
+            }
+        "#)
+        .file("test.js", r#"
+            import * as assert from "assert";
+            import * as wasm from "./out";
+
+            export function test() {
+                const map = new Map();
+                map.set(1, true);
+                map.set(2, false);
+                map.set(3, "awoo");
+                map.set(4, 100);
+                map.set(5, []);
+                map.set(6, {});
+
+                const res = wasm.get_bool_vals(map);
+
+                assert.equal(map.size, 6);
+                assert.equal(res.size, 2);
+                assert.equal(res.get(1), true);
+                assert.equal(res.get(2), false);
+            }
+        "#)
+        .test()
+}
+
+#[test]
 fn get() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -101,7 +146,7 @@ fn get() {
 fn has() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -130,7 +175,7 @@ fn has() {
 fn new() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -158,7 +203,7 @@ fn new() {
 fn set() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
@@ -187,7 +232,7 @@ fn set() {
 fn size() {
     project()
         .file("src/lib.rs", r#"
-            #![feature(proc_macro, wasm_custom_section)]
+            #![feature(use_extern_macros)]
 
             extern crate wasm_bindgen;
             use wasm_bindgen::prelude::*;
