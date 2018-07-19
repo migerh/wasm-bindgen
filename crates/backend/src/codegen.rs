@@ -573,9 +573,17 @@ impl ToTokens for ast::ImportNamespace {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let vis = &self.vis;
         let name = &self.name;
+        let functions: Vec<TokenStream> = self
+            .functions
+            .iter()
+            .map(|f| quote!(#f).into_token_stream())
+            .collect();
+
         (quote! {
             #[allow(bad_style)]
             #vis mod #name {
+                use wasm_bindgen::prelude::*;
+                #(#functions)*
             }
         }).to_tokens(tokens);
     }
@@ -670,6 +678,7 @@ impl ToTokens for ast::ImportFunction {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let mut class_ty = None;
         let mut is_method = false;
+        let mut namespace_name = None;
         match self.kind {
             ast::ImportFunctionKind::Method {
                 ref ty, ref kind, ..
@@ -681,6 +690,9 @@ impl ToTokens for ast::ImportFunction {
                     is_method = true;
                 }
                 class_ty = Some(ty);
+            }
+            ast::ImportFunctionKind::Namespace { ref namespace } => {
+                namespace_name = Some(namespace);
             }
             ast::ImportFunctionKind::Normal => {}
         }
@@ -773,6 +785,7 @@ impl ToTokens for ast::ImportFunction {
 
         let rust_name = &self.rust_name;
         let import_name = &self.shim;
+        let real_name = &self.function.name;
         let attrs = &self.function.rust_attrs;
         let arguments = &arguments;
 
@@ -782,7 +795,28 @@ impl ToTokens for ast::ImportFunction {
             quote!()
         };
 
-        let invocation = quote! {
+        let invocation = if let Some(namespace) = namespace_name {
+          let namespace_without_quotes = namespace.replace("\"", "");
+          quote! {
+              #(#attrs)*
+              #[wasm_bindgen]
+              #[allow(bad_style)]
+              #[cfg(all(target_arch = "wasm32", not(target_os = "emscripten")))]
+              extern {
+                  #[wasm_bindgen(js_namespace = #namespace_without_quotes, js_name = #real_name)]
+                  #vis fn #rust_name(#(#arguments),*) #ret;
+              }
+
+            #(#attrs)*
+            #[allow(bad_style, unused_variables)]
+            #[cfg(not(all(target_arch = "wasm32", not(target_os = "emscripten"))))]
+            #vis fn #rust_name(#me #(#arguments),*) #ret {
+                panic!("cannot call wasm-bindgen imported functions on \
+                        non-wasm targets");
+            }
+          }
+        } else {
+          quote! {
             #(#attrs)*
             #[allow(bad_style)]
             #[cfg(all(target_arch = "wasm32", not(target_os = "emscripten")))]
@@ -812,7 +846,7 @@ impl ToTokens for ast::ImportFunction {
                 panic!("cannot call wasm-bindgen imported functions on \
                         non-wasm targets");
             }
-
+          }
         };
 
         if let Some(class) = class_ty {

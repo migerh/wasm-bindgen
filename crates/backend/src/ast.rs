@@ -71,6 +71,9 @@ pub enum ImportFunctionKind {
         ty: syn::Type,
         kind: MethodKind,
     },
+    Namespace {
+        namespace: String,
+    },
     Normal,
 }
 
@@ -380,7 +383,8 @@ impl ImportFunction {
                     class: class.clone(),
                     kind,
                 })
-            }
+            },
+            ImportFunctionKind::Namespace { .. } => None,
             ImportFunctionKind::Normal => None,
         };
 

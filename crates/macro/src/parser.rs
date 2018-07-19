@@ -429,6 +429,7 @@ impl ConvertToAst<BindgenAttrs> for syn::ForeignItemFn {
         let shim = {
             let ns = match kind {
                 ast::ImportFunctionKind::Normal => (0, "n"),
+                ast::ImportFunctionKind::Namespace { .. } => (0, "ns"),
                 ast::ImportFunctionKind::Method { ref class, .. } => (1, &class[..]),
             };
             let data = (ns, &self.ident);

@@ -296,6 +296,7 @@ impl<'a> FirstPassRecord<'a> {
         let shim = {
             let ns = match kind {
                 backend::ast::ImportFunctionKind::Normal => "",
+                backend::ast::ImportFunctionKind::Namespace { ref namespace, .. } => namespace,
                 backend::ast::ImportFunctionKind::Method { ref class, .. } => class,
             };
 
@@ -317,6 +318,51 @@ impl<'a> FirstPassRecord<'a> {
             kind,
             shim,
         })
+    }
+
+    pub fn create_namespace_function(
+        &self,
+        arguments: &[webidl::ast::Argument],
+        name: Option<&String>,
+        return_type: &webidl::ast::ReturnType,
+        namespace_name: &str,
+        catch: bool,
+    ) -> Option<backend::ast::ImportFunction> {
+        let name = match name {
+            None => {
+                warn!("Operations without a name are unsupported");
+                return None;
+            }
+            Some(ref name) => name,
+        };
+
+        let kind = backend::ast::ImportFunctionKind::Namespace {
+            namespace: namespace_name.to_string(),
+        };
+
+        let ret = match return_type {
+            webidl::ast::ReturnType::Void => None,
+            webidl::ast::ReturnType::NonVoid(ty) => {
+                match self.webidl_ty_to_syn_ty(ty, TypePosition::Return) {
+                    None => {
+                        warn!("Operation's return type is not yet supported: {:?}", ty);
+                        return None;
+                    }
+                    Some(ty) => Some(ty),
+                }
+            }
+        };
+
+        self.create_function(
+            &name,
+            arguments
+                .iter()
+                .map(|arg| (&*arg.name, &*arg.type_, arg.variadic)),
+            ret,
+            kind,
+            false,
+            catch,
+        )
     }
 
     pub fn create_basic_method(
